@@ -1,0 +1,106 @@
+<html>
+<header>
+    <title>Demo</title>
+</header>
+
+<body>
+    <div id="demo"></div>
+</body>
+<script type="text/javascript">
+var x = document.getElementById("demo");
+var nav = navigator;
+
+function log(e) {
+    console.log(e);
+    x.innerHTML += "<br/>" + e;
+}
+
+function ts() {
+    return new Date().getTime();
+}
+
+function showPosition(position, tag) {
+    console.log(tag);
+    x.innerHTML += "<br/> [" + tag + "] Latitude: " + position.coords.latitude +
+        ", Longitude: " + position.coords.longitude +
+        ", accuracy: " + position.coords.accuracy +
+        ", duration: " + position.duration;
+}
+
+function showError(error) {
+    switch (error.code) {
+        case error.PERMISSION_DENIED:
+            x.innerHTML = "User denied the request for Geolocation."
+            break;
+        case error.POSITION_UNAVAILABLE:
+            x.innerHTML = "Location information is unavailable."
+            break;
+        case error.TIMEOUT:
+            x.innerHTML = "The request to get user location timed out."
+            break;
+        case error.UNKNOWN_ERROR:
+            x.innerHTML = "An unknown error occurred."
+            break;
+    }
+}
+
+function geolocate() {
+    var start = ts();
+    setTimeout(function() {
+        console.log('call with high setting');
+        navigator.geolocation.getCurrentPosition(function(e) {
+            e.duration = ts() - start;
+            showPosition(e, 'high');
+            console.log(arguments);
+        }, function(error) {
+            log('error');
+            console.log(arguments);
+            showError(error);
+        }, {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 120000
+        });
+    }, 0);
+    setTimeout(function() {
+        console.log('call with low setting');
+        navigator.geolocation.getCurrentPosition(function(e) {
+            e.duration = ts() - start;
+            showPosition(e, 'low');
+            console.log(arguments);
+        }, function(error) {
+            log('error');
+            console.log(arguments);
+            showError(error);
+        }, {
+            enableHighAccuracy: false,
+            timeout: 15000,
+            maximumAge: Infinity
+        });
+    }, 10);
+    setTimeout(function() {
+        console.log('call with watch setting');
+        var _watchId = navigator.geolocation.watchPosition(function(e) {
+            e.duration = ts() - start;
+            showPosition(e, 'watch');
+            navigator.geolocation.clearWatch(_watchId);
+        }, showError, {
+            enableHighAccuracy: false,
+            timeout: 15000,
+            maximumAge: Infinity
+        });
+    }, 20);
+
+    nav.permissions.query({
+        name: 'geolocation'
+    }).then(function(e) {
+        var state = e ? e.state : '';
+        console.log(e.state);
+        log('permission: ' + state);
+    });
+}
+
+geolocate();
+</script>
+
+</html>
