@@ -1,106 +1,239 @@
+<!DOCTYPE html>
 <html>
-<header>
-    <title>Demo</title>
-</header>
-
-<body>
+  <head>
+    <style type="text/css" media="screen">
+      .popup {
+        height: 300px;
+        width: 300px;
+        margin: 0 auto;
+        border: 1px solid;
+        box-shadow: 7px 7px 167px 1px #585858;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        margin-top: 100px;
+        background: #f1f1f1;
+        font-family: cursive;
+      }
+    </style>
+  </head>
+  
+  <body>
+    <center>
+      <h1>Regeolocation</h1>
+        <div style="padding: 5px;">
+            <label style="padding-right: 10px; text-align: left;">Geolocation Timeout:</label>
+            <input type="text" id="txt-geolocation-timeout" value="5"/>
+        </div>
+        <div style="padding: 5px;">
+            <label style="padding-right: 10px; text-align: left;">Regeolocation Timeout:</label>
+            <input type="text" id="txt-regeolocation-timeout" value="30"/>
+        </div>
+      <!-- <button id="btn">click me</button> -->
+      <button id="btn-geolocation">click me to geolocation</button>
+      <button id="btn-clear">clear log</button>
+      <div style="text-align: center; font-size: 30px;">
+        <span id="countdown"></span>
+      </div>
+    </center>
     <div id="demo"></div>
-</body>
-<script type="text/javascript">
-var x = document.getElementById("demo");
-var nav = navigator;
+    <script>
+    //   let btn = document.querySelector("#btn");
+      let btnClear = document.querySelector("#btn-clear");
+      let btnGeolocation = document.querySelector("#btn-geolocation");
+      let pop = document.querySelector(".popup");
+      var interrupted = 0;
+      var x = document.getElementById("demo");
+      var geoLocationIsProcessing = false;
+      var geoLocationTimeout = false;
+      var autoRegeolocation = false;
+      var geoTimeout = 5000;
+      var reGeoTimeout = 30000;
+      var countDownInterval;
 
-function log(e) {
-    console.log(e);
-    x.innerHTML += "<br/>" + e;
-}
 
-function ts() {
-    return new Date().getTime();
-}
+      btnClear.addEventListener("click", () => {
+        x.innerHTML = "";
+      });
 
-function showPosition(position, tag) {
-    console.log(tag);
-    x.innerHTML += "<br/> [" + tag + "] Latitude: " + position.coords.latitude +
-        ", Longitude: " + position.coords.longitude +
-        ", accuracy: " + position.coords.accuracy +
-        ", duration: " + position.duration;
-}
+      btnGeolocation.addEventListener("click", () => {
+        triggerGetLocation();
+      });
 
-function showError(error) {
-    switch (error.code) {
-        case error.PERMISSION_DENIED:
-            x.innerHTML = "User denied the request for Geolocation."
-            break;
-        case error.POSITION_UNAVAILABLE:
-            x.innerHTML = "Location information is unavailable."
-            break;
-        case error.TIMEOUT:
-            x.innerHTML = "The request to get user location timed out."
-            break;
-        case error.UNKNOWN_ERROR:
-            x.innerHTML = "An unknown error occurred."
-            break;
+      const options = {
+        enableHighAccuracy: true,
+        maximumAge: 30000,
+        timeout: geoTimeout
+    };
+    /**
+     * type: 1 normal, 2 red, 3 green
+     **/
+    function appendData(data, element = "p", type=1) {
+        let p = document.createElement('p');
+        let newDomElement = null;
+        if(element !== 'p') {
+            let newDomElement = document.createElement(element);
+            newDomElement.innerHTML = data;
+        }
+        if (type === 2) {
+            p.style.backgroundColor = 'red';
+            p.style.color = "white";
+        }
+        if (type === 3) {
+            p.style.backgroundColor = 'green';
+            p.style.color = "white";
+        }
+        if (newDomElement) {
+            p.append(newDomElement);
+        } else {
+            p.innerHTML = data;
+        }
+
+        x.append(p);
     }
-}
+    function startCountDown(countdownNumber) {
+        let countdown = document.getElementById("countdown");
+        countdown.innerHTML = countdownNumber;
+        countDownInterval = setInterval(function() {
+            countdown.innerHTML = --countdownNumber + '';
+            if(countdownNumber == 0)
+                clearInterval(countDownInterval);
+        }, 1000);
+    }
+    function triggerGetLocation() {
+        let txtGeoTimeout = document.getElementById("txt-geolocation-timeout");
+        let txtRegeotimeout = document.getElementById("txt-regeolocation-timeout");
+        let countdownNumber = parseInt(txtRegeotimeout.value);
+        startCountDown(countdownNumber);
+        console.log(`txtGeoTimeout = ${txtGeoTimeout.value}; txtRegeotimeout = ${txtRegeotimeout.value}`);
+        if(txtGeoTimeout) {
+            geoTimeout = parseInt(txtGeoTimeout.value) * 1000;
+        }
+        if(txtRegeotimeout) {
+            reGeoTimeout = parseInt(txtRegeotimeout.value) * 1000;
+        }
+        getLocation();
+    }
 
-function geolocate() {
-    var start = ts();
-    setTimeout(function() {
-        console.log('call with high setting');
-        navigator.geolocation.getCurrentPosition(function(e) {
-            e.duration = ts() - start;
-            showPosition(e, 'high');
-            console.log(arguments);
-        }, function(error) {
-            log('error');
-            console.log(arguments);
-            showError(error);
-        }, {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 120000
-        });
-    }, 0);
-    setTimeout(function() {
-        console.log('call with low setting');
-        navigator.geolocation.getCurrentPosition(function(e) {
-            e.duration = ts() - start;
-            showPosition(e, 'low');
-            console.log(arguments);
-        }, function(error) {
-            log('error');
-            console.log(arguments);
-            showError(error);
-        }, {
-            enableHighAccuracy: false,
-            timeout: 15000,
-            maximumAge: Infinity
-        });
-    }, 10);
-    setTimeout(function() {
-        console.log('call with watch setting');
-        var _watchId = navigator.geolocation.watchPosition(function(e) {
-            e.duration = ts() - start;
-            showPosition(e, 'watch');
-            navigator.geolocation.clearWatch(_watchId);
-        }, showError, {
-            enableHighAccuracy: false,
-            timeout: 15000,
-            maximumAge: Infinity
-        });
-    }, 20);
+    function getLocation(restart=false) {
+        if(restart) {
+            appendData('Restart geolocation at: ' + new Date(), "p", 3);
+        } else {
+            appendData('Start geolocation at: ' + new Date(), "p", 3);
+        }
+        autoRegeolocation = true;
+        setTimeout(function() {
+            autoRegeolocation = false;
+            console.log('call callback autoRegeolocation = ', autoRegeolocation);
+        }, reGeoTimeout);
+        geoLocationIsProcessing = true;
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition, showError, options);
+        } else {
+            x.innerHTML = "Geolocation is not supported by this browser.";
+        }
+    };
 
-    nav.permissions.query({
-        name: 'geolocation'
-    }).then(function(e) {
-        var state = e ? e.state : '';
-        console.log(e.state);
-        log('permission: ' + state);
-    });
-}
+    function showPosition(position) {
+        clearInterval(countDownInterval);
+        geoLocationIsProcessing = false;
+        let p = document.createElement("p");
+        let hr = document.createElement("hr");
+        p.innerHTML = "Latitude: " + position.coords.latitude +
+        "<br>Longitude: " + position.coords.longitude;
+        x.append(p);
+        appendData('End geolocation at: ' + new Date(), "p", 3);
+        x.append(hr);
+    }
 
-geolocate();
-</script>
-
+    function showError(error) {
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                appendData("User denied the request for Geolocation.","p",2)
+                break;
+            case error.POSITION_UNAVAILABLE:
+                appendData("Location information is unavailable.");
+                break;
+            case error.TIMEOUT:
+                appendData("The request to get user location timed out.", "p", 2);
+                geoLocationTimeout = true;
+                break;
+            case error.UNKNOWN_ERROR:
+                appendData("An unknown error occurred.")
+                break;
+        }
+    }
+  
+    //   window.onblur = () => (pop.style.display = "none");
+      // window.onfocus = () => alert("onfocus event called");
+      (function () {
+          var hidden,
+              visibilityChange,
+              handler = function (e, focusBlur) {
+                  isActive = typeof e === 'boolean' ? e : document.visibilityState === 'visible' || !document[hidden];
+                  console.log('focusBlur = ',focusBlur, 
+                    ' isActive = ', isActive, 
+                    ' geoLocationIsProcessing = ', geoLocationIsProcessing, 
+                    ' geoLocationTimeout = ', geoLocationTimeout,
+                    ' autoRegeolocation = ', autoRegeolocation);
+                  if (focusBlur == undefined) {
+                    if(isActive 
+                        && geoLocationIsProcessing 
+                        && geoLocationTimeout
+                        && autoRegeolocation) {
+                        getLocation(true);
+                    }
+                    let visibilityStateStr = JSON.stringify({ visibilitychange: new Date(), isActive: isActive });
+                    appendData(visibilityStateStr, 'i');
+                    console.log(visibilityStateStr);
+                  }
+                  if (!isActive) {
+                      interrupted++;
+                      console.log('interrupted = ', interrupted);
+                  }
+              };
+          if (typeof document.hidden !== 'undefined') {
+              hidden = 'hidden';
+              visibilityChange = 'visibilitychange';
+          } else if (typeof document.msHidden !== 'undefined') {
+              hidden = 'msHidden';
+              visibilityChange = 'msvisibilitychange';
+          } else if (typeof document.webkitHidden !== 'undefined') {
+              hidden = 'webkitHidden';
+              visibilityChange = 'webkitvisibilitychange';
+          }
+          if (typeof document.addEventListener !== 'undefined' && hidden) {
+              document.addEventListener(visibilityChange, handler, false);
+          }
+          document.addEventListener(
+              'focus',
+              function () {
+                  handler(true, true);
+              },
+              false
+          );
+          document.addEventListener(
+              'blur',
+              function () {
+                  handler(false, true);
+              },
+              false
+          );
+          window.addEventListener(
+              'focus',
+              function () {
+                  handler(true, true);
+              },
+              false
+          );
+          window.addEventListener(
+              'blur',
+              function () {
+                  handler(false, true);
+              },
+              false
+          );
+      })();
+    </script>
+  </body>
 </html>
